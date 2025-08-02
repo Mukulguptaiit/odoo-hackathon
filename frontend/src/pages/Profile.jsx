@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { FaUser, FaEnvelope, FaShieldAlt, FaGlobe, FaSave, FaSignOutAlt, FaArrowLeft, FaUserPlus, FaClock } from 'react-icons/fa';
 import api from '../services/api';
 import CategorySelector from '../components/CategorySelector';
+import { useUserInterests } from '../hooks/useCategories';
 
 const Profile = () => {
   const { user, logout } = useAuth();
@@ -11,7 +12,6 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [categories, setCategories] = useState([]);
   const [roleRequests, setRoleRequests] = useState([]);
   const [showRoleRequestForm, setShowRoleRequestForm] = useState(false);
   const [roleRequestData, setRoleRequestData] = useState({
@@ -25,7 +25,10 @@ const Profile = () => {
     role: 'end_user',
     language: 'en'
   });
-  const [categoriesOfInterest, setCategoriesOfInterest] = useState([]);
+  const [categoryOfInterest, setCategoryOfInterest] = useState('');
+
+  // Use optimized hook for user interests
+  const { data: userInterests } = useUserInterests();
 
   useEffect(() => {
     if (user) {
@@ -37,19 +40,14 @@ const Profile = () => {
         language: user.language || 'en'
       });
     }
-    fetchCategories();
-    fetchUserInterests();
     fetchRoleRequests();
   }, [user]);
 
-  const fetchCategories = async () => {
-    try {
-      const response = await api.get('/categories');
-      setCategories(response.data);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
+  useEffect(() => {
+    if (userInterests && userInterests.length > 0) {
+      setCategoryOfInterest(userInterests[0]._id);
     }
-  };
+  }, [userInterests]);
 
   const fetchRoleRequests = async () => {
     try {
@@ -57,15 +55,6 @@ const Profile = () => {
       setRoleRequests(response.data);
     } catch (error) {
       console.error('Error fetching role requests:', error);
-    }
-  };
-
-  const fetchUserInterests = async () => {
-    try {
-      const response = await api.get('/categories/user-interests');
-      setCategoriesOfInterest(response.data.map(cat => cat._id));
-    } catch (error) {
-      console.error('Error fetching user interests:', error);
     }
   };
 
@@ -91,8 +80,10 @@ const Profile = () => {
         email: formData.email
       };
 
-      // Update categories of interest for all users
-      updateData.categoriesOfInterest = categoriesOfInterest;
+      // Update category of interest for all users
+      if (categoryOfInterest) {
+        updateData.categoryOfInterest = categoryOfInterest;
+      }
 
       // Only admins can update roles
       if (user.role === 'admin') {
@@ -240,12 +231,12 @@ const Profile = () => {
               )}
             </div>
 
-            {/* Categories of Interest */}
+            {/* Category of Interest */}
             <div>
               <CategorySelector
-                multiple={true}
-                selectedValues={categoriesOfInterest}
-                onChange={setCategoriesOfInterest}
+                singleSelection={true}
+                selectedValues={categoryOfInterest ? [categoryOfInterest] : []}
+                onChange={(categoryId) => setCategoryOfInterest(categoryId)}
               />
             </div>
 

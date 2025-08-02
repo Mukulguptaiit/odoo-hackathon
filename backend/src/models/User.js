@@ -32,10 +32,13 @@ const userSchema = new mongoose.Schema({
     enum: ['end_user', 'support_agent', 'admin'],
     default: 'end_user'
   },
-  categoriesOfInterest: [{
+  categoryOfInterest: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Category'
-  }],
+  },
+  refreshToken: {
+    type: String
+  },
   isVerified: {
     type: Boolean,
     default: false

@@ -22,18 +22,46 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor to handle errors
+// Response interceptor to handle errors and token refresh
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      // Only redirect if not already on login page
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      if (refreshToken) {
+        try {
+          const response = await api.post('/auth/refresh', { refreshToken });
+          const { token, refreshToken: newRefreshToken } = response.data.data;
+          
+          localStorage.setItem('token', token);
+          localStorage.setItem('refreshToken', newRefreshToken);
+          
+          // Retry the original request with new token
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        } catch (refreshError) {
+          // Refresh token failed, logout user
+          localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+        }
+      } else {
+        // No refresh token, logout user
+        localStorage.removeItem('token');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
       }
     }
-    return Promise.reject(error)
+    
+    return Promise.reject(error);
   }
 )
 
@@ -42,6 +70,7 @@ export const authAPI = {
   register: (userData) => api.post('/auth/register', userData),
   login: (email, password) => api.post('/auth/login', { email, password }),
   getCurrentUser: () => api.get('/auth/me').then(res => res.data.data),
+  refreshToken: (refreshToken) => api.post('/auth/refresh', { refreshToken }),
 }
 
 // Items API

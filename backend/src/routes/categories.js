@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const Category = require('../models/Category');
+const User = require('../models/User');
 const { protect, admin } = require('../middleware/auth');
+const { cacheMiddleware, clearCache } = require('../middleware/cache');
 
 // Get all predefined categories (categories of interest)
-router.get('/', protect, async (req, res) => {
+router.get('/', protect, cacheMiddleware(600), async (req, res) => {
   try {
     const categories = await Category.find({ isPredefined: true, isActive: true })
       .sort({ name: 1 });
@@ -31,28 +33,31 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-// Get user's categories of interest
+// Get user's category of interest
 router.get('/user-interests', protect, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).populate('categoriesOfInterest');
-    res.json(user.categoriesOfInterest || []);
+    const user = await User.findById(req.user._id).populate('categoryOfInterest');
+    res.json(user.categoryOfInterest ? [user.categoryOfInterest] : []);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching user interests', error: error.message });
   }
 });
 
-// Update user's categories of interest
+// Update user's category of interest
 router.put('/user-interests', protect, async (req, res) => {
   try {
     const { categoryIds } = req.body;
     
+    // Take the first category from the array or null if empty
+    const categoryId = categoryIds && categoryIds.length > 0 ? categoryIds[0] : null;
+    
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { categoriesOfInterest: categoryIds },
+      { categoryOfInterest: categoryId },
       { new: true }
-    ).populate('categoriesOfInterest');
+    ).populate('categoryOfInterest');
 
-    res.json(user.categoriesOfInterest);
+    res.json(user.categoryOfInterest ? [user.categoryOfInterest] : []);
   } catch (error) {
     res.status(500).json({ message: 'Error updating user interests', error: error.message });
   }
@@ -84,6 +89,9 @@ router.put('/:id', protect, admin, async (req, res) => {
       return res.status(404).json({ message: 'Category not found' });
     }
 
+    // Clear categories cache after update
+    clearCache('/categories');
+    
     res.json(category);
   } catch (error) {
     res.status(500).json({ message: 'Error updating category', error: error.message });
@@ -109,6 +117,9 @@ router.delete('/:id', protect, admin, async (req, res) => {
     }
 
     await Category.findByIdAndDelete(req.params.id);
+
+    // Clear categories cache after deletion
+    clearCache('/categories');
 
     res.json({ message: 'Category deleted successfully' });
   } catch (error) {

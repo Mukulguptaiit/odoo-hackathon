@@ -95,7 +95,7 @@ const AdminDashboard = () => {
               <Ticket className="w-5 h-5" />
               Recent Tickets
             </h3>
-            <a href="/admin/tickets" className="text-sm text-blue-600 hover:text-blue-700">
+            <a href="/tickets" className="text-sm text-blue-600 hover:text-blue-700">
               View all
             </a>
           </div>

@@ -1,68 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { FaPlus, FaSearch, FaFilter, FaEye, FaThumbsUp, FaThumbsDown, FaComments, FaShare } from 'react-icons/fa';
-import api from '../services/api';
+import { useTickets } from '../hooks/useTickets';
+import { useCategories } from '../hooks/useCategories';
+import { useDebounce } from '../hooks/useDebounce';
 
 const TicketList = () => {
   const { user } = useAuth();
-  const [tickets, setTickets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [filters, setFilters] = useState({
     status: '',
     category: '',
     search: '',
     assignedTo: ''
   });
-  const [categories, setCategories] = useState([]);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
     total: 0
   });
 
-  useEffect(() => {
-    fetchCategories();
-    fetchTickets();
-  }, [filters, pagination.currentPage]);
+  // Debounce search input to reduce API calls
+  const debouncedSearch = useDebounce(filters.search, 500);
 
-  const fetchCategories = async () => {
-    try {
-      const response = await api.get('/categories');
-      setCategories(response.data);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
+  // Memoize the query parameters to prevent unnecessary re-renders
+  const queryParams = useMemo(() => ({
+    page: pagination.currentPage,
+    limit: 10,
+    status: filters.status,
+    category: filters.category,
+    search: debouncedSearch, // Use debounced search
+    assignedTo: filters.assignedTo,
+    ...(user.role === 'support_agent' && filters.assignedTo && { assignedTo: filters.assignedTo })
+  }), [pagination.currentPage, filters.status, filters.category, debouncedSearch, filters.assignedTo, user.role]);
 
-  const fetchTickets = async () => {
-    try {
-      setLoading(true);
-      const params = {
-        page: pagination.currentPage,
-        limit: 10,
-        ...filters
-      };
+  // Use optimized hooks
+  const { data: ticketsData, isLoading, error } = useTickets(queryParams);
+  const { data: categories, isLoading: categoriesLoading } = useCategories();
 
-      // Add role-specific filters
-      if (user.role === 'support_agent' && filters.assignedTo) {
-        params.assignedTo = filters.assignedTo;
-      }
-
-      const response = await api.get('/tickets', { params });
-      setTickets(response.data.tickets);
-      setPagination({
-        currentPage: response.data.currentPage,
-        totalPages: response.data.totalPages,
-        total: response.data.total
-      });
-    } catch (error) {
-      setError('Error fetching questions');
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
+  // Extract data from response
+  const tickets = ticketsData?.tickets || [];
+  const paginationData = {
+    currentPage: ticketsData?.currentPage || 1,
+    totalPages: ticketsData?.totalPages || 1,
+    total: ticketsData?.total || 0
   };
 
   const handleFilterChange = (key, value) => {
@@ -73,11 +54,8 @@ const TicketList = () => {
   const handleVote = async (ticketId, voteType) => {
     try {
       const response = await api.post(`/tickets/${ticketId}/vote`, { voteType });
-      setTickets(prev => 
-        prev.map(ticket => 
-          ticket._id === ticketId ? response.data : ticket
-        )
-      );
+      // The vote will be reflected in the next data fetch due to cache invalidation
+      // For immediate UI update, you could use queryClient.setQueryData
     } catch (error) {
       console.error('Error voting:', error);
     }
@@ -103,7 +81,7 @@ const TicketList = () => {
     });
   };
 
-  if (loading) {
+  if (isLoading || categoriesLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -168,7 +146,7 @@ const TicketList = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">All Categories</option>
-                {categories.map(category => (
+                {categories?.map(category => (
                   <option key={category._id} value={category._id}>
                     {category.name}
                   </option>
@@ -314,23 +292,23 @@ const TicketList = () => {
         </div>
 
         {/* Pagination */}
-        {pagination.totalPages > 1 && (
+        {paginationData.totalPages > 1 && (
           <div className="flex justify-center mt-8">
             <nav className="flex items-center gap-2">
               <button
                 onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
-                disabled={pagination.currentPage === 1}
+                disabled={paginationData.currentPage === 1}
                 className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
               
-              {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(page => (
+              {Array.from({ length: paginationData.totalPages }, (_, i) => i + 1).map(page => (
                 <button
                   key={page}
                   onClick={() => setPagination(prev => ({ ...prev, currentPage: page }))}
                   className={`px-3 py-2 text-sm font-medium rounded-lg ${
-                    page === pagination.currentPage
+                    page === paginationData.currentPage
                       ? 'bg-blue-600 text-white'
                       : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
                   }`}
@@ -341,7 +319,7 @@ const TicketList = () => {
               
               <button
                 onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
-                disabled={pagination.currentPage === pagination.totalPages}
+                disabled={paginationData.currentPage === paginationData.totalPages}
                 className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next

@@ -40,9 +40,10 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await authAPI.login(email, password)
-      const { token, ...userData } = response.data.data
+      const { token, refreshToken, ...userData } = response.data.data
       
       localStorage.setItem('token', token)
+      localStorage.setItem('refreshToken', refreshToken)
       setUser(userData)
       
       toast.success('Login successful!')
@@ -59,9 +60,10 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await authAPI.register(userData)
-      const { token, ...user } = response.data.data
+      const { token, refreshToken, ...user } = response.data.data
       
       localStorage.setItem('token', token)
+      localStorage.setItem('refreshToken', refreshToken)
       setUser(user)
       
       toast.success('Registration successful!')
@@ -77,6 +79,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
     setUser(null)
     toast.success('Logged out successfully')
     navigate('/')

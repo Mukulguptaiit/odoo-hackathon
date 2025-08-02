@@ -7,9 +7,10 @@ const User = require('../models/User');
 const { protect, admin } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const { sendEmailNotification } = require('../utils/email');
+const { cacheMiddleware, clearCache } = require('../middleware/cache');
 
 // Get all tickets with filtering and pagination
-router.get('/', protect, async (req, res) => {
+router.get('/', protect, cacheMiddleware(300), async (req, res) => {
   try {
     const {
       page = 1,

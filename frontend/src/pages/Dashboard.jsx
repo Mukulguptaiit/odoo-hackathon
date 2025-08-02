@@ -1,93 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   FaTicketAlt, FaCheckCircle, FaClock, FaExclamationTriangle, 
   FaChartBar, FaPlus, FaUsers, FaComments, FaBell 
 } from 'react-icons/fa';
-import api from '../services/api';
+import { useTicketStats } from '../hooks/useTickets';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const [stats, setStats] = useState({
-    totalQuestions: 0,
-    answeredQuestions: 0,
-    unansweredQuestions: 0,
-    categoryBreakdown: [],
-    recentTickets: []
-  });
-  const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState('');
+  
+  const { data: stats, isLoading, error } = useTicketStats();
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch tickets for stats
-      const ticketsResponse = await api.get('/tickets', { 
-        params: { 
-          limit: 1000, // Get all tickets for stats
-          page: 1 
-        } 
-      });
-      
-      const allTickets = ticketsResponse.data.tickets;
-      
-      // Calculate stats
-      const totalQuestions = allTickets.length;
-      const answeredQuestions = allTickets.filter(t => 
-        ['resolved', 'closed'].includes(t.status)
-      ).length;
-      const unansweredQuestions = totalQuestions - answeredQuestions;
-
-      // Category breakdown
-      const categoryMap = {};
-      allTickets.forEach(ticket => {
-        if (ticket.category) {
-          const categoryName = ticket.category.name;
-          categoryMap[categoryName] = (categoryMap[categoryName] || 0) + 1;
-        }
-      });
-
-      const categoryBreakdown = Object.entries(categoryMap).map(([name, count]) => ({
-        name,
-        count,
-        color: getCategoryColor(name)
-      }));
-
-      setStats({
-        totalQuestions,
-        answeredQuestions,
-        unansweredQuestions,
-        categoryBreakdown,
-        recentTickets: allTickets.slice(0, 5) // Get 5 most recent tickets
-      });
-
-      // Show notification if there are new tickets
-      if (totalQuestions > 0) {
-        setNotification(`Welcome back! You have ${totalQuestions} total questions in the system.`);
-        setTimeout(() => setNotification(''), 5000);
-      }
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
+  // Show notification when data loads
+  React.useEffect(() => {
+    if (stats?.totalQuestions > 0) {
+      setNotification(`Welcome back! You have ${stats.totalQuestions} total questions in the system.`);
+      setTimeout(() => setNotification(''), 5000);
     }
-  };
-
-  const getCategoryColor = (categoryName) => {
-    const colors = [
-      'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-red-500',
-      'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-gray-500'
-    ];
-    const index = categoryName.length % colors.length;
-    return colors[index];
-  };
+  }, [stats?.totalQuestions]);
 
   const getStatusColor = (status) => {
     const colors = {
@@ -108,10 +40,18 @@ const Dashboard = () => {
     });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-red-600">Error loading dashboard data</div>
       </div>
     );
   }
@@ -142,7 +82,7 @@ const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Questions</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalQuestions}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.totalQuestions || 0}</p>
             </div>
           </div>
         </div>
@@ -154,7 +94,7 @@ const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Answered</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.answeredQuestions}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.answeredQuestions || 0}</p>
             </div>
           </div>
         </div>
@@ -166,7 +106,7 @@ const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Unanswered</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.unansweredQuestions}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.unansweredQuestions || 0}</p>
             </div>
           </div>
         </div>
@@ -178,21 +118,21 @@ const Dashboard = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Categories</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.categoryBreakdown.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.categoryBreakdown?.length || 0}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Category Breakdown */}
-      {stats.categoryBreakdown.length > 0 && (
+      {stats?.categoryBreakdown?.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm border mb-8">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">Breakdown by Category</h2>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {stats.categoryBreakdown.map((category, index) => (
+              {stats?.categoryBreakdown?.map((category, index) => (
                 <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
                     <div className={`w-4 h-4 rounded-full ${category.color} mr-3`}></div>
@@ -242,7 +182,7 @@ const Dashboard = () => {
           <h2 className="text-lg font-semibold text-gray-900">Recent Questions</h2>
         </div>
         
-        {stats.recentTickets.length === 0 ? (
+        {stats?.recentTickets?.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
             <FaTicketAlt className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <p className="text-lg">No questions yet</p>
@@ -257,7 +197,7 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {stats.recentTickets.map(ticket => (
+            {stats?.recentTickets?.map(ticket => (
               <div key={ticket._id} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -301,7 +241,7 @@ const Dashboard = () => {
           </div>
         )}
         
-        {stats.recentTickets.length > 0 && (
+        {stats?.recentTickets?.length > 0 && (
           <div className="p-6 border-t border-gray-200">
             <Link
               to="/tickets"

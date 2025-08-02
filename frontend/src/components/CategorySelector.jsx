@@ -1,30 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import React from 'react';
+import { useCategories } from '../hooks/useCategories';
 
-const CategorySelector = ({ value, onChange, className = '', multiple = false, selectedValues = [] }) => {
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/categories');
-      setCategories(response.data);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      setError('Failed to load categories');
-    } finally {
-      setLoading(false);
-    }
-  };
+const CategorySelector = ({ value, onChange, className = '', multiple = false, selectedValues = [], singleSelection = false }) => {
+  const { data: categories, isLoading: loading, error } = useCategories();
 
   const handleCategoryChange = (categoryId) => {
-    if (multiple) {
+    if (singleSelection) {
+      // For single selection (user category of interest)
+      onChange(categoryId);
+    } else if (multiple) {
       // For multiple selection (categories of interest)
       const newSelectedValues = selectedValues.includes(categoryId)
         ? selectedValues.filter(id => id !== categoryId)
@@ -63,17 +47,45 @@ const CategorySelector = ({ value, onChange, className = '', multiple = false, s
   return (
     <div className={className}>
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        {multiple ? 'Categories of Interest' : 'Category'}
+        {singleSelection ? 'Category of Interest' : multiple ? 'Categories of Interest' : 'Category'}
       </label>
       
-      {multiple ? (
+      {singleSelection ? (
+        // Single selection for user category of interest
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600 mb-3">
+            Select your primary category of interest:
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-60 overflow-y-auto">
+            {categories?.map(category => (
+              <label
+                key={category._id}
+                className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+                  selectedValues.includes(category._id)
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="categoryOfInterest"
+                  checked={selectedValues.includes(category._id)}
+                  onChange={() => handleCategoryChange(category._id)}
+                  className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                />
+                <span className="text-sm font-medium">{category.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ) : multiple ? (
         // Multiple selection for categories of interest
         <div className="space-y-3">
           <p className="text-sm text-gray-600 mb-3">
             Select categories that interest you (you can select multiple):
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-60 overflow-y-auto">
-            {categories.map(category => (
+            {categories?.map(category => (
               <label
                 key={category._id}
                 className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
@@ -101,7 +113,7 @@ const CategorySelector = ({ value, onChange, className = '', multiple = false, s
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="">Select a category (optional)</option>
-          {categories.map(category => (
+          {categories?.map(category => (
             <option key={category._id} value={category._id}>
               {category.name}
             </option>
