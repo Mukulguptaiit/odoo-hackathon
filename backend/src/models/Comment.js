@@ -74,6 +74,12 @@ commentSchema.virtual('authorName', {
   }
 });
 
+// Indexes for better query performance
+commentSchema.index({ ticket: 1 });
+commentSchema.index({ author: 1 });
+commentSchema.index({ ticket: 1, createdAt: 1 });
+commentSchema.index({ ticket: 1, isInternal: 1 });
+
 // Ensure virtuals are serialized
 commentSchema.set('toJSON', { virtuals: true });
 commentSchema.set('toObject', { virtuals: true });

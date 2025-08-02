@@ -84,6 +84,10 @@ ticketSchema.index({ category: 1 });
 ticketSchema.index({ priority: 1 });
 ticketSchema.index({ createdAt: -1 });
 ticketSchema.index({ updatedAt: -1 });
+// Compound indexes for common sorting scenarios
+ticketSchema.index({ status: 1, createdAt: -1 });
+ticketSchema.index({ status: 1, updatedAt: -1 });
+ticketSchema.index({ category: 1, createdAt: -1 });
 
 // Virtual for vote count
 ticketSchema.virtual('voteCount').get(function() {

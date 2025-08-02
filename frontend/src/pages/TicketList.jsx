@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FaPlus, FaSearch, FaFilter, FaEye, FaThumbsUp, FaThumbsDown, FaComments, FaShare } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaFilter, FaEye, FaThumbsUp, FaThumbsDown, FaComments, FaShare, FaSortUp, FaSortDown } from 'react-icons/fa';
 import { useTickets } from '../hooks/useTickets';
 import { useCategories } from '../hooks/useCategories';
 import { useDebounce } from '../hooks/useDebounce';
+import api from '../services/api';
 
 const TicketList = () => {
   const { user } = useAuth();
@@ -12,7 +13,9 @@ const TicketList = () => {
     status: '',
     category: '',
     search: '',
-    assignedTo: ''
+    assignedTo: '',
+    sortBy: 'createdAt',
+    sortOrder: 'desc'
   });
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -31,8 +34,10 @@ const TicketList = () => {
     category: filters.category,
     search: debouncedSearch, // Use debounced search
     assignedTo: filters.assignedTo,
+    sortBy: filters.sortBy,
+    sortOrder: filters.sortOrder,
     ...(user.role === 'support_agent' && filters.assignedTo && { assignedTo: filters.assignedTo })
-  }), [pagination.currentPage, filters.status, filters.category, debouncedSearch, filters.assignedTo, user.role]);
+  }), [pagination.currentPage, filters.status, filters.category, debouncedSearch, filters.assignedTo, filters.sortBy, filters.sortOrder, user.role]);
 
   // Use optimized hooks
   const { data: ticketsData, isLoading, error } = useTickets(queryParams);
@@ -92,11 +97,14 @@ const TicketList = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Questions & Answers</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Questions & Answers</h1>
+            <p className="text-gray-600 mt-1">Find answers or ask new questions</p>
+          </div>
           <Link
             to="/create-ticket"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
           >
             <FaPlus />
             Ask Your Question
@@ -104,10 +112,10 @@ const TicketList = () => {
         </div>
 
         {/* Search & Filter */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Search */}
-            <div className="lg:col-span-2">
+            <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Search Questions</label>
               <div className="relative">
                 <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -153,6 +161,30 @@ const TicketList = () => {
                 ))}
               </select>
             </div>
+
+            {/* Sort By */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+              <div className="flex">
+                <select
+                  value={filters.sortBy}
+                  onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                >
+                  <option value="createdAt">Recently Asked</option>
+                  <option value="lastActivity">Recently Modified</option>
+                  <option value="commentCount">Most Replied</option>
+                  <option value="voteCount">Most Voted</option>
+                </select>
+                <button
+                  onClick={() => handleFilterChange('sortOrder', filters.sortOrder === 'desc' ? 'asc' : 'desc')}
+                  className="flex-shrink-0 w-10 px-2 py-2 border border-l-0 border-gray-300 rounded-r-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent flex items-center justify-center"
+                  title={filters.sortOrder === 'desc' ? 'Sort Ascending' : 'Sort Descending'}
+                >
+                  {filters.sortOrder === 'desc' ? <FaSortDown className="text-gray-500 text-sm" /> : <FaSortUp className="text-gray-500 text-sm" />}
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Filter Tags */}
@@ -190,6 +222,25 @@ const TicketList = () => {
                 </button>
               </span>
             )}
+            {filters.sortBy !== 'createdAt' && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800">
+                Sorted by: {
+                  filters.sortBy === 'lastActivity' ? 'Recently Modified' :
+                  filters.sortBy === 'commentCount' ? 'Most Replied' :
+                  filters.sortBy === 'voteCount' ? 'Most Voted' :
+                  'Recently Asked'
+                } ({filters.sortOrder === 'desc' ? 'Descending' : 'Ascending'})
+                <button
+                  onClick={() => {
+                    handleFilterChange('sortBy', 'createdAt');
+                    handleFilterChange('sortOrder', 'desc');
+                  }}
+                  className="ml-2 text-purple-600 hover:text-purple-800"
+                >
+                  ×
+                </button>
+              </span>
+            )}
           </div>
         </div>
 
@@ -209,80 +260,93 @@ const TicketList = () => {
           ) : (
             <div className="divide-y divide-gray-200">
               {tickets.map(ticket => (
-                <div key={ticket._id} className="p-6 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          <Link to={`/tickets/${ticket._id}`} className="hover:text-blue-600">
+                <div key={ticket._id} className="p-4 sm:p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 leading-tight">
+                          <Link to={`/tickets/${ticket._id}`} className="hover:text-blue-600 break-words">
                             {ticket.subject}
                           </Link>
                         </h3>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(ticket.status)}`}>
+                        <span className={`self-start sm:self-auto px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${getStatusColor(ticket.status)}`}>
                           {ticket.status === 'open' ? 'Open' : ticket.status === 'closed' ? 'Closed' : ticket.status.replace('_', ' ')}
                         </span>
                       </div>
                       
-                      <p className="text-gray-600 mb-3 line-clamp-2">{ticket.description}</p>
+                      <p className="text-gray-600 mb-3 line-clamp-2 text-sm sm:text-base">{ticket.description}</p>
                       
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span>Asked by {ticket.creatorName}</span>
-                        <span>• {formatDate(ticket.createdAt)}</span>
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
+                        <span className="whitespace-nowrap">Asked by {ticket.creatorName}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="whitespace-nowrap">{formatDate(ticket.createdAt)}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="flex items-center gap-1 whitespace-nowrap">
+                          <FaComments className="text-xs" />
+                          {ticket.commentCount || 0} replies
+                        </span>
                         {ticket.category && (
-                          <span className="flex items-center gap-1">
-                            <div 
-                              className="w-3 h-3 rounded-full" 
-                              style={{ backgroundColor: ticket.category.color }}
-                            ></div>
-                            {ticket.category.name}
-                          </span>
+                          <>
+                            <span className="hidden sm:inline">•</span>
+                            <span className="flex items-center gap-1 whitespace-nowrap">
+                              <div 
+                                className="w-3 h-3 rounded-full flex-shrink-0" 
+                                style={{ backgroundColor: ticket.category.color }}
+                              ></div>
+                              {ticket.category.name}
+                            </span>
+                          </>
                         )}
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2 ml-4">
+                    <div className="flex items-center justify-between lg:justify-end gap-2 lg:ml-4">
                       {/* Vote buttons */}
-                      <button
-                        onClick={() => handleVote(ticket._id, 'upvote')}
-                        className={`p-2 rounded-lg transition-colors ${
-                          ticket.upvotes.some(vote => vote._id === user._id)
-                            ? 'text-green-600 bg-green-50'
-                            : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
-                        }`}
-                      >
-                        <FaThumbsUp />
-                      </button>
-                      <span className="text-sm text-gray-500 min-w-[20px] text-center">
-                        {ticket.voteCount}
-                      </span>
-                      <button
-                        onClick={() => handleVote(ticket._id, 'downvote')}
-                        className={`p-2 rounded-lg transition-colors ${
-                          ticket.downvotes.some(vote => vote._id === user._id)
-                            ? 'text-red-600 bg-red-50'
-                            : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
-                        }`}
-                      >
-                        <FaThumbsDown />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleVote(ticket._id, 'upvote')}
+                          className={`p-2 rounded-lg transition-colors ${
+                            ticket.upvotes.some(vote => vote._id === user._id)
+                              ? 'text-green-600 bg-green-50'
+                              : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
+                          }`}
+                        >
+                          <FaThumbsUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </button>
+                        <span className="text-sm text-gray-500 min-w-[20px] text-center">
+                          {ticket.voteCount}
+                        </span>
+                        <button
+                          onClick={() => handleVote(ticket._id, 'downvote')}
+                          className={`p-2 rounded-lg transition-colors ${
+                            ticket.downvotes.some(vote => vote._id === user._id)
+                              ? 'text-red-600 bg-red-50'
+                              : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
+                          }`}
+                        >
+                          <FaThumbsDown className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </button>
+                      </div>
                       
                       {/* Action buttons */}
-                      <Link
-                        to={`/tickets/${ticket._id}`}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="View conversations"
-                      >
-                        <FaComments />
-                      </Link>
-                      
-                      {(user.role === 'support_agent' || user.role === 'admin') && (
-                        <button
-                          className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Share link"
+                      <div className="flex items-center gap-1">
+                        <Link
+                          to={`/tickets/${ticket._id}`}
+                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="View conversations"
                         >
-                          <FaShare />
-                        </button>
-                      )}
+                          <FaComments className="w-3 h-3 sm:w-4 sm:h-4" />
+                        </Link>
+                        
+                        {(user.role === 'support_agent' || user.role === 'admin') && (
+                          <button
+                            className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Share link"
+                          >
+                            <FaShare className="w-3 h-3 sm:w-4 sm:h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -293,8 +357,11 @@ const TicketList = () => {
 
         {/* Pagination */}
         {paginationData.totalPages > 1 && (
-          <div className="flex justify-center mt-8">
-            <nav className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-6 sm:mt-8 gap-4">
+            <div className="text-sm text-gray-500 order-2 sm:order-1">
+              Showing {((paginationData.currentPage - 1) * 10) + 1} to {Math.min(paginationData.currentPage * 10, paginationData.total)} of {paginationData.total} questions
+            </div>
+            <nav className="flex items-center gap-1 sm:gap-2 order-1 sm:order-2">
               <button
                 onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage - 1 }))}
                 disabled={paginationData.currentPage === 1}
@@ -303,19 +370,37 @@ const TicketList = () => {
                 Previous
               </button>
               
-              {Array.from({ length: paginationData.totalPages }, (_, i) => i + 1).map(page => (
-                <button
-                  key={page}
-                  onClick={() => setPagination(prev => ({ ...prev, currentPage: page }))}
-                  className={`px-3 py-2 text-sm font-medium rounded-lg ${
-                    page === paginationData.currentPage
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+              {/* Show fewer page numbers on mobile */}
+              {Array.from({ length: Math.min(paginationData.totalPages, 5) }, (_, i) => {
+                let page;
+                if (paginationData.totalPages <= 5) {
+                  page = i + 1;
+                } else {
+                  const current = paginationData.currentPage;
+                  const total = paginationData.totalPages;
+                  if (current <= 3) {
+                    page = i + 1;
+                  } else if (current >= total - 2) {
+                    page = total - 4 + i;
+                  } else {
+                    page = current - 2 + i;
+                  }
+                }
+                
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setPagination(prev => ({ ...prev, currentPage: page }))}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg ${
+                      page === paginationData.currentPage
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
               
               <button
                 onClick={() => setPagination(prev => ({ ...prev, currentPage: prev.currentPage + 1 }))}
