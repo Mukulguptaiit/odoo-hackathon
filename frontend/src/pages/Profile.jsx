@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FaUser, FaEnvelope, FaShieldAlt, FaGlobe, FaSave, FaSignOutAlt, FaArrowLeft } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaShieldAlt, FaGlobe, FaSave, FaSignOutAlt, FaArrowLeft, FaUserPlus, FaClock } from 'react-icons/fa';
 import api from '../services/api';
 
 const Profile = () => {
@@ -11,6 +11,12 @@ const Profile = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [categories, setCategories] = useState([]);
+  const [roleRequests, setRoleRequests] = useState([]);
+  const [showRoleRequestForm, setShowRoleRequestForm] = useState(false);
+  const [roleRequestData, setRoleRequestData] = useState({
+    requestedRole: 'support_agent',
+    reason: ''
+  });
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -32,6 +38,7 @@ const Profile = () => {
       });
     }
     fetchCategories();
+    fetchRoleRequests();
   }, [user]);
 
   const fetchCategories = async () => {
@@ -40,6 +47,15 @@ const Profile = () => {
       setCategories(response.data);
     } catch (error) {
       console.error('Error fetching categories:', error);
+    }
+  };
+
+  const fetchRoleRequests = async () => {
+    try {
+      const response = await api.get('/role-requests/my-requests');
+      setRoleRequests(response.data);
+    } catch (error) {
+      console.error('Error fetching role requests:', error);
     }
   };
 
@@ -94,6 +110,25 @@ const Profile = () => {
     const newLanguage = formData.language === 'en' ? 'es' : 'en';
     setFormData(prev => ({ ...prev, language: newLanguage }));
     setSuccess('Language changed successfully!');
+  };
+
+  const handleRoleRequest = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await api.post('/role-requests', roleRequestData);
+      setSuccess('Role request submitted successfully!');
+      setShowRoleRequestForm(false);
+      setRoleRequestData({ requestedRole: 'support_agent', reason: '' });
+      fetchRoleRequests();
+    } catch (error) {
+      setError(error.response?.data?.message || 'Error submitting role request');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const canUpdateRole = user?.role === 'admin';
@@ -264,6 +299,135 @@ const Profile = () => {
           </div>
         </form>
       </div>
+
+      {/* Role Request Section */}
+      {user?.role === 'end_user' && (
+        <div className="bg-white rounded-lg shadow-sm border mt-8">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <FaUserPlus />
+              Role Change Request
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Request to become a Support Agent or Admin
+            </p>
+          </div>
+
+          <div className="p-6">
+            {!showRoleRequestForm ? (
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Note:</strong> These roles provide additional permissions and access to support features.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setShowRoleRequestForm(true)}
+                  className="btn btn-primary"
+                >
+                  <FaUserPlus className="mr-2" />
+                  Request Role Change
+                </button>
+
+                {/* Show existing requests */}
+                {roleRequests.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-md font-medium text-gray-900 mb-3">Your Requests</h3>
+                    <div className="space-y-3">
+                      {roleRequests.map((request) => (
+                        <div key={request._id} className="border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium">
+                                Request to become: {request.requestedRole.replace('_', ' ')}
+                              </p>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Status: <span className={`font-medium ${
+                                  request.status === 'pending' ? 'text-yellow-600' :
+                                  request.status === 'approved' ? 'text-green-600' :
+                                  'text-red-600'
+                                }`}>
+                                  {request.status}
+                                </span>
+                              </p>
+                              {request.reason && (
+                                <p className="text-sm text-gray-600 mt-1">
+                                  Reason: {request.reason}
+                                </p>
+                              )}
+                              {request.adminNotes && (
+                                <p className="text-sm text-gray-600 mt-1">
+                                  Admin Notes: {request.adminNotes}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-gray-500">
+                                {new Date(request.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <form onSubmit={handleRoleRequest} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Requested Role
+                  </label>
+                  <select
+                    value={roleRequestData.requestedRole}
+                    onChange={(e) => setRoleRequestData(prev => ({ ...prev, requestedRole: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="support_agent">Support Agent</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason for Request
+                  </label>
+                  <textarea
+                    value={roleRequestData.reason}
+                    onChange={(e) => setRoleRequestData(prev => ({ ...prev, reason: e.target.value }))}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Please explain why you want this role change..."
+                    maxLength={500}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {roleRequestData.reason.length}/500 characters
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowRoleRequestForm(false)}
+                    className="btn btn-outline"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn btn-primary"
+                  >
+                    {loading ? 'Submitting...' : 'Submit Request'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

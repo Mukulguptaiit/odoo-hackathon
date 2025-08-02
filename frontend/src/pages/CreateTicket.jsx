@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUpload, FaTimes, FaPaperclip, FaTag, FaQuestion } from 'react-icons/fa';
 import api from '../services/api';
+import CategorySelector from '../components/CategorySelector';
 
 const CreateTicket = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({
     subject: '',
     description: '',
@@ -16,19 +16,6 @@ const CreateTicket = () => {
   });
   const [attachments, setAttachments] = useState([]);
   const [dragActive, setDragActive] = useState(false);
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
-    try {
-      const response = await api.get('/categories');
-      setCategories(response.data);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -174,25 +161,10 @@ const CreateTicket = () => {
             </div>
 
             {/* Category */}
-            <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                id="category"
-                name="category"
-                value={formData.category}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select a category (optional)</option>
-                {categories.map(category => (
-                  <option key={category._id} value={category._id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CategorySelector
+              value={formData.category}
+              onChange={(value) => handleInputChange({ target: { name: 'category', value } })}
+            />
 
             {/* Tags */}
             <div>

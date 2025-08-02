@@ -26,7 +26,7 @@ export default {
   daisyui: {
     themes: [
       {
-        rewear: {
+        quickdesk: {
           "primary": "#0ea5e9",
           "primary-focus": "#0369a1",
           "primary-content": "#ffffff",

@@ -10,6 +10,7 @@ const authRoutes = require('./routes/auth');
 const ticketRoutes = require('./routes/tickets');
 const categoryRoutes = require('./routes/categories');
 const adminRoutes = require('./routes/admin');
+const roleRequestRoutes = require('./routes/roleRequests');
 const { errorHandler } = require('./middleware/errorHandler');
 
 // Load environment variables
@@ -49,6 +50,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/role-requests', roleRequestRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

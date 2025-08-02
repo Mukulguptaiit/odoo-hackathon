@@ -2,13 +2,14 @@ import { useQuery } from '@tanstack/react-query'
 import { adminAPI } from '../services/api'
 import { 
   Users, 
-  ShoppingBag, 
-  RefreshCw, 
-  Clock,
+  Ticket, 
+  Clock, 
   TrendingUp,
   Shield,
   CheckCircle,
-  XCircle
+  XCircle,
+  UserPlus,
+  Tag
 } from 'lucide-react'
 
 const AdminDashboard = () => {
@@ -25,27 +26,27 @@ const AdminDashboard = () => {
       color: 'text-primary'
     },
     {
-      label: 'Total Items',
-      value: dashboardData?.stats?.totalItems || 0,
-      icon: ShoppingBag,
+      label: 'Total Tickets',
+      value: dashboardData?.stats?.totalTickets || 0,
+      icon: Ticket,
       color: 'text-secondary'
     },
     {
-      label: 'Pending Items',
-      value: dashboardData?.stats?.pendingItems || 0,
+      label: 'Open Tickets',
+      value: dashboardData?.stats?.openTickets || 0,
       icon: Clock,
       color: 'text-warning'
     },
     {
-      label: 'Total Swaps',
-      value: dashboardData?.stats?.totalSwaps || 0,
-      icon: RefreshCw,
+      label: 'Pending Role Requests',
+      value: dashboardData?.stats?.pendingRoleRequests || 0,
+      icon: UserPlus,
       color: 'text-accent'
     },
     {
-      label: 'Completed Swaps',
-      value: dashboardData?.stats?.completedSwaps || 0,
-      icon: TrendingUp,
+      label: 'Total Categories',
+      value: dashboardData?.stats?.totalCategories || 0,
+      icon: Tag,
       color: 'text-success'
     }
   ]
@@ -64,7 +65,7 @@ const AdminDashboard = () => {
       <div>
         <h1 className="text-3xl font-bold text-base-content">Admin Dashboard</h1>
         <p className="text-base-content/70 mt-2">
-          Manage and moderate the ReWear platform
+          Manage and moderate the QuickDesk platform
         </p>
       </div>
 
@@ -87,38 +88,39 @@ const AdminDashboard = () => {
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Items */}
+        {/* Recent Tickets */}
         <div className="bg-base-200 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
-              <ShoppingBag className="w-5 h-5" />
-              Recent Items
+              <Ticket className="w-5 h-5" />
+              Recent Tickets
             </h3>
-            <a href="/admin/items" className="text-sm text-primary hover:text-primary-focus">
+            <a href="/admin/tickets" className="text-sm text-primary hover:text-primary-focus">
               View all
             </a>
           </div>
           
-          {dashboardData?.recentActivity?.items?.length > 0 ? (
+          {dashboardData?.recentActivity?.tickets?.length > 0 ? (
             <div className="space-y-4">
-              {dashboardData.recentActivity.items.map((item) => (
-                <div key={item._id} className="flex items-center gap-4 p-3 bg-base-100 rounded-lg">
+              {dashboardData.recentActivity.tickets.map((ticket) => (
+                <div key={ticket._id} className="flex items-center gap-4 p-3 bg-base-100 rounded-lg">
                   <div className="w-12 h-12 bg-base-300 rounded-lg flex items-center justify-center">
-                    <ShoppingBag className="w-6 h-6 text-base-content/50" />
+                    <Ticket className="w-6 h-6 text-base-content/50" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-medium">{item.title}</h4>
+                    <h4 className="font-medium">{ticket.subject}</h4>
                     <p className="text-sm text-base-content/70">
-                      by {item.uploader?.firstName} {item.uploader?.lastName}
+                      by {ticket.creator?.firstName} {ticket.creator?.lastName}
                     </p>
                   </div>
                   <div className="text-right">
                     <span className={`badge ${
-                      item.status === 'available' ? 'badge-success' :
-                      item.status === 'pending' ? 'badge-warning' :
+                      ticket.status === 'resolved' ? 'badge-success' :
+                      ticket.status === 'in_progress' ? 'badge-info' :
+                      ticket.status === 'open' ? 'badge-warning' :
                       'badge-error'
                     }`}>
-                      {item.status}
+                      {ticket.status}
                     </span>
                   </div>
                 </div>
@@ -126,45 +128,44 @@ const AdminDashboard = () => {
             </div>
           ) : (
             <div className="text-center py-8">
-              <ShoppingBag className="w-12 h-12 text-base-content/30 mx-auto mb-4" />
-              <p className="text-base-content/70">No recent items</p>
+              <Ticket className="w-12 h-12 text-base-content/30 mx-auto mb-4" />
+              <p className="text-base-content/70">No recent tickets</p>
             </div>
           )}
         </div>
 
-        {/* Recent Swaps */}
+        {/* Recent Role Requests */}
         <div className="bg-base-200 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold flex items-center gap-2">
-              <RefreshCw className="w-5 h-5" />
-              Recent Swaps
+              <UserPlus className="w-5 h-5" />
+              Recent Role Requests
             </h3>
-            <a href="/admin/swaps" className="text-sm text-primary hover:text-primary-focus">
+            <a href="/admin/role-requests" className="text-sm text-primary hover:text-primary-focus">
               View all
             </a>
           </div>
           
-          {dashboardData?.recentActivity?.swaps?.length > 0 ? (
+          {dashboardData?.recentActivity?.roleRequests?.length > 0 ? (
             <div className="space-y-4">
-              {dashboardData.recentActivity.swaps.map((swap) => (
-                <div key={swap._id} className="flex items-center gap-4 p-3 bg-base-100 rounded-lg">
+              {dashboardData.recentActivity.roleRequests.map((request) => (
+                <div key={request._id} className="flex items-center gap-4 p-3 bg-base-100 rounded-lg">
                   <div className="w-12 h-12 bg-base-300 rounded-lg flex items-center justify-center">
-                    <RefreshCw className="w-6 h-6 text-base-content/50" />
+                    <UserPlus className="w-6 h-6 text-base-content/50" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-medium">{swap.itemRequested?.title}</h4>
+                    <h4 className="font-medium">{request.user?.firstName} {request.user?.lastName}</h4>
                     <p className="text-sm text-base-content/70">
-                      by {swap.requester?.firstName} {swap.requester?.lastName}
+                      Requesting: {request.requestedRole.replace('_', ' ')}
                     </p>
                   </div>
                   <div className="text-right">
                     <span className={`badge ${
-                      swap.status === 'completed' ? 'badge-success' :
-                      swap.status === 'accepted' ? 'badge-info' :
-                      swap.status === 'pending' ? 'badge-warning' :
+                      request.status === 'approved' ? 'badge-success' :
+                      request.status === 'pending' ? 'badge-warning' :
                       'badge-error'
                     }`}>
-                      {swap.status}
+                      {request.status}
                     </span>
                   </div>
                 </div>
@@ -172,8 +173,8 @@ const AdminDashboard = () => {
             </div>
           ) : (
             <div className="text-center py-8">
-              <RefreshCw className="w-12 h-12 text-base-content/30 mx-auto mb-4" />
-              <p className="text-base-content/70">No recent swaps</p>
+              <UserPlus className="w-12 h-12 text-base-content/30 mx-auto mb-4" />
+              <p className="text-base-content/70">No recent role requests</p>
             </div>
           )}
         </div>
@@ -186,54 +187,54 @@ const AdminDashboard = () => {
           Quick Actions
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <a href="/admin/items?status=pending" className="btn btn-outline btn-block">
+          <a href="/admin/tickets?status=open" className="btn btn-outline btn-block">
             <Clock className="w-4 h-4 mr-2" />
-            Review Pending Items
+            Review Open Tickets
           </a>
-          <a href="/admin/items" className="btn btn-outline btn-block">
-            <ShoppingBag className="w-4 h-4 mr-2" />
-            Manage All Items
+          <a href="/admin/tickets" className="btn btn-outline btn-block">
+            <Ticket className="w-4 h-4 mr-2" />
+            Manage All Tickets
           </a>
           <a href="/admin/users" className="btn btn-outline btn-block">
             <Users className="w-4 h-4 mr-2" />
             View Users
           </a>
-          <a href="/admin/swaps" className="btn btn-outline btn-block">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Monitor Swaps
+          <a href="/admin/role-requests?status=pending" className="btn btn-outline btn-block">
+            <UserPlus className="w-4 h-4 mr-2" />
+            Review Role Requests
           </a>
         </div>
       </div>
 
-      {/* Moderation Guidelines */}
+      {/* Admin Guidelines */}
       <div className="bg-base-200 rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-4">Moderation Guidelines</h3>
+        <h3 className="text-lg font-semibold mb-4">Admin Guidelines</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <h4 className="font-medium text-success flex items-center gap-2">
               <CheckCircle className="w-4 h-4" />
-              Approve Items That:
+              Approve Role Requests When:
             </h4>
             <ul className="text-sm text-base-content/70 space-y-1 ml-6">
-              <li>• Are in good condition</li>
-              <li>• Have clear, high-quality images</li>
-              <li>• Include accurate descriptions</li>
-              <li>• Follow community guidelines</li>
-              <li>• Are appropriate for all ages</li>
+              <li>• User has good track record</li>
+              <li>• Reason is legitimate and clear</li>
+              <li>• User demonstrates competence</li>
+              <li>• Request aligns with platform needs</li>
+              <li>• User has been active for reasonable time</li>
             </ul>
           </div>
           
           <div className="space-y-3">
             <h4 className="font-medium text-error flex items-center gap-2">
               <XCircle className="w-4 h-4" />
-              Reject Items That:
+              Reject Role Requests When:
             </h4>
             <ul className="text-sm text-base-content/70 space-y-1 ml-6">
-              <li>• Are in poor condition</li>
-              <li>• Have inappropriate content</li>
-              <li>• Violate community guidelines</li>
-              <li>• Are counterfeit or fake</li>
-              <li>• Have unclear or misleading descriptions</li>
+              <li>• User has poor track record</li>
+              <li>• Reason is unclear or inappropriate</li>
+              <li>• User shows lack of competence</li>
+              <li>• Request seems suspicious</li>
+              <li>• User has been inactive or problematic</li>
             </ul>
           </div>
         </div>

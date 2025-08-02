@@ -63,12 +63,21 @@ export const swapsAPI = {
 
 // Admin API
 export const adminAPI = {
-  getItems: (params) => api.get('/admin/items', { params }),
-  approveItem: (id) => api.put(`/admin/items/${id}/approve`),
-  rejectItem: (id, reason) => api.put(`/admin/items/${id}/reject`, { reason }),
-  deleteItem: (id) => api.delete(`/admin/items/${id}`),
+  getTickets: (params) => api.get('/admin/tickets', { params }),
+  deleteTicket: (id) => api.delete(`/admin/tickets/${id}`),
+  getRoleRequests: (params) => api.get('/admin/role-requests', { params }),
   getDashboard: () => api.get('/admin/dashboard'),
   getUsers: (params) => api.get('/admin/users', { params }),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
+}
+
+// Role Requests API
+export const roleRequestsAPI = {
+  getAll: (params) => api.get('/role-requests', { params }),
+  getMyRequests: () => api.get('/role-requests/my-requests'),
+  create: (data) => api.post('/role-requests', data),
+  review: (id, data) => api.put(`/role-requests/${id}/review`, data),
+  delete: (id) => api.delete(`/role-requests/${id}`),
 }
 
 export default api 

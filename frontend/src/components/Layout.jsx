@@ -10,7 +10,8 @@ import {
   FaBars, 
   FaTimes,
   FaShieldAlt,
-  FaChartBar
+  FaChartBar,
+  FaUserPlus
 } from 'react-icons/fa'
 
 const Layout = ({ children }) => {
@@ -23,7 +24,10 @@ const Layout = ({ children }) => {
     { name: 'Questions', href: '/tickets', icon: FaComments },
     { name: 'Ask Question', href: '/create-ticket', icon: FaPlus },
     { name: 'Profile', href: '/profile', icon: FaUser },
-    ...(user?.role === 'admin' ? [{ name: 'Admin Panel', href: '/admin', icon: FaShieldAlt }] : [])
+    ...(user?.role === 'admin' ? [
+      { name: 'Admin Panel', href: '/admin', icon: FaShieldAlt },
+      { name: 'Role Requests', href: '/admin/role-requests', icon: FaUserPlus }
+    ] : [])
   ]
 
   const isActive = (href) => location.pathname === href

@@ -11,6 +11,7 @@ import TicketDetail from './pages/TicketDetail'
 import CreateTicket from './pages/CreateTicket'
 import Profile from './pages/Profile'
 import AdminDashboard from './pages/AdminDashboard'
+import RoleRequests from './pages/RoleRequests'
 import NotFound from './pages/NotFound'
 
 function App() {
@@ -64,6 +65,13 @@ function App() {
           <ProtectedRoute adminOnly>
             <Layout>
               <AdminDashboard />
+            </Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/role-requests" element={
+          <ProtectedRoute adminOnly>
+            <Layout>
+              <RoleRequests />
             </Layout>
           </ProtectedRoute>
         } />
