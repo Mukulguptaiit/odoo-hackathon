@@ -93,12 +93,21 @@ router.get('/:id', protect, async (req, res) => {
     }
 
     // Check if user can view this question
+    // End users can only view their own tickets, support agents and admins can view all
     if (req.user.role === 'end_user' && ticket.creator.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    // Get comments
-    const comments = await Comment.find({ ticket: req.params.id })
+    // Get comments with role-based filtering
+    let commentQuery = { ticket: req.params.id };
+    
+    // End users can only see public comments
+    if (req.user.role === 'end_user') {
+      commentQuery.isInternal = false;
+    }
+    // Support agents and admins can see all comments
+    
+    const comments = await Comment.find(commentQuery)
       .populate('author', 'firstName lastName email role')
       .populate('upvotes', 'firstName lastName')
       .populate('downvotes', 'firstName lastName')
@@ -145,6 +154,9 @@ router.post('/', protect, upload.array('attachments', 5), async (req, res) => {
     await ticket.populate('creator', 'firstName lastName email');
     await ticket.populate('category', 'name color');
 
+    // Clear cache after creating new ticket
+    clearCache('/api/tickets');
+
     // Send email notification to support agents
     const supportAgents = await User.find({ role: 'support_agent', isActive: true });
     for (const agent of supportAgents) {
@@ -152,7 +164,7 @@ router.post('/', protect, upload.array('attachments', 5), async (req, res) => {
         ticketId: ticket._id,
         subject: ticket.subject,
         creator: `${req.user.firstName} ${req.user.lastName}`,
-        category: categoryExists.name
+        category: categoryExists ? categoryExists.name : 'Uncategorized'
       });
     }
 
@@ -208,6 +220,9 @@ router.put('/:id', protect, async (req, res) => {
      .populate('assignedTo', 'firstName lastName email')
      .populate('category', 'name color');
 
+    // Clear cache after updating ticket
+    clearCache('/api/tickets');
+
     // Send email notification for status changes
     if (status && status !== ticket.status) {
       await sendEmailNotification(ticket.creator.email, 'Question Status Updated', {
@@ -234,6 +249,8 @@ router.post('/:id/comments', protect, upload.array('attachments', 5), async (req
     }
 
     // Check if user can comment on this question
+    // Support agents and admins can comment on any question
+    // End users can only comment on their own questions
     if (req.user.role === 'end_user' && ticket.creator.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'You can only comment on your own questions' });
     }
@@ -262,6 +279,9 @@ router.post('/:id/comments', protect, upload.array('attachments', 5), async (req
 
     // Populate references for response
     await comment.populate('author', 'firstName lastName email role');
+
+    // Clear cache after adding comment
+    clearCache('/api/tickets');
 
     // Send email notification
     if (!isInternal) {
@@ -334,6 +354,9 @@ router.post('/:id/vote', protect, async (req, res) => {
     await ticket.populate('upvotes', 'firstName lastName');
     await ticket.populate('downvotes', 'firstName lastName');
 
+    // Clear cache after voting
+    clearCache('/api/tickets');
+
     res.json(ticket);
   } catch (error) {
     res.status(500).json({ message: 'Error voting on question', error: error.message });
@@ -387,6 +410,9 @@ router.post('/comments/:commentId/vote', protect, async (req, res) => {
     await comment.populate('upvotes', 'firstName lastName');
     await comment.populate('downvotes', 'firstName lastName');
 
+    // Clear cache after voting on comment
+    clearCache('/api/tickets');
+
     res.json(comment);
   } catch (error) {
     res.status(500).json({ message: 'Error voting on comment', error: error.message });
@@ -411,6 +437,9 @@ router.delete('/:id', protect, async (req, res) => {
 
     // Delete question
     await Ticket.findByIdAndDelete(req.params.id);
+
+    // Clear cache after deleting ticket
+    clearCache('/api/tickets');
 
     res.json({ message: 'Question deleted successfully' });
   } catch (error) {

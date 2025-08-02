@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { FaUpload, FaTimes, FaPaperclip, FaTag, FaQuestion } from 'react-icons/fa';
 import api from '../services/api';
 import CategorySelector from '../components/CategorySelector';
 
 const CreateTicket = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -108,6 +110,10 @@ const CreateTicket = () => {
           'Content-Type': 'multipart/form-data'
         }
       });
+
+      // Invalidate related queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['ticketStats'] });
 
       navigate('/tickets');
     } catch (error) {

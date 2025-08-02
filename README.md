@@ -59,44 +59,37 @@ A modern, feature-rich help desk system built with React, Node.js, and MongoDB. 
 - **Nodemailer** for email notifications
 - **Helmet** for security headers
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v16 or higher)
-- MongoDB (local or cloud instance)
+- Node.js (v18 or higher)
+- npm or yarn
+- MongoDB (local or cloud instance)nce)
 - SMTP server for email notifications (optional)
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd QuickDesk
+   git clone <your-repo-url>
+   cd odoo-hackathon
    ```
 
 2. **Install dependencies**
    ```bash
-   # Install backend dependencies
-   cd backend
-   npm install
-   
-   # Install frontend dependencies
-   cd ../frontend
-   npm install
+   npm run install:all
    ```
 
 3. **Environment Setup**
-   ```bash
-   # Backend environment variables
-   cd backend
-   cp env.example .env
-   ```
-   
-   Edit `.env` file:
+
+
+   Create `.env` files in both frontend and backend directories:
+
+   **Backend (.env)**
    ```env
    PORT=5000
-   MONGODB_URI=mongodb://localhost:27017/quickdesk
-   JWT_SECRET=your-secret-key
+   MONGODB_URI=mongodb://localhost:27017/rewear
+   JWT_SECRET=your-super-secret-jwt-key
    NODE_ENV=development
    
    # Email configuration (optional)
@@ -106,18 +99,18 @@ A modern, feature-rich help desk system built with React, Node.js, and MongoDB. 
    SMTP_PASS=your-app-password
    ```
 
+   **Frontend (.env)**
+   ```env
+   VITE_API_URL=http://localhost:5000/api
+   ```
+
+
 4. **Start the development servers**
    ```bash
-   # Start backend (from backend directory)
-   npm run dev
-   
-   # Start frontend (from frontend directory)
    npm run dev
    ```
 
-5. **Access the application**
-   - Frontend: http://localhost:5173
-   - Backend API: http://localhost:5000
+   This will start both frontend (http://localhost:5173) and backend (http://localhost:5000) servers.
 
 ## API Endpoints
 

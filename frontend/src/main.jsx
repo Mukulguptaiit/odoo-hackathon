@@ -15,12 +15,12 @@ if (typeof document !== 'undefined') {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 10 * 60 * 1000, // 10 minutes - data stays fresh longer
-      cacheTime: 30 * 60 * 1000, // 30 minutes - cache data for longer
+      staleTime: 0, // Data is immediately stale
+      cacheTime: 30 * 1000, // Cache for only 30 seconds
       retry: 1,
-      refetchOnWindowFocus: false, // Don't refetch when window gains focus
-      refetchOnMount: false, // Don't refetch when component mounts if data exists
-      refetchOnReconnect: true, // Only refetch on reconnect
+      refetchOnWindowFocus: true, // Refetch when window gains focus
+      refetchOnMount: true, // Always refetch when component mounts
+      refetchOnReconnect: true, // Refetch on reconnect
     },
     mutations: {
       retry: 1,

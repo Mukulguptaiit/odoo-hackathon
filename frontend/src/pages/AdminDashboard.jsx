@@ -187,15 +187,16 @@ const AdminDashboard = () => {
           Quick Actions
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <a href="/admin/tickets?status=open" className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+          <a href="/tickets?status=open" className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
             <Clock className="w-4 h-4 mr-2" />
             Review Open Tickets
           </a>
-          <a href="/admin/tickets" className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+          <a href="/tickets" className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
             <Ticket className="w-4 h-4 mr-2" />
             Manage All Tickets
           </a>
-          <a href="/admin/users" className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+          {/* can add view users functionality  */}
+          <a href="/" className="flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
             <Users className="w-4 h-4 mr-2" />
             View Users
           </a>

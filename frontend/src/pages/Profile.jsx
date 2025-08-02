@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FaUser, FaEnvelope, FaShieldAlt, FaGlobe, FaSave, FaSignOutAlt, FaArrowLeft, FaUserPlus, FaClock } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaShieldAlt, FaGlobe, FaSave, FaSignOutAlt, FaArrowLeft, FaUserPlus, FaClock, FaTag } from 'react-icons/fa';
 import api from '../services/api';
-import CategorySelector from '../components/CategorySelector';
-import { useUserInterests } from '../hooks/useCategories';
+import { useCategories, useUserInterests } from '../hooks/useCategories';
 
 const Profile = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,11 +26,13 @@ const Profile = () => {
   });
   const [categoryOfInterest, setCategoryOfInterest] = useState('');
 
-  // Use optimized hook for user interests
+  // Use optimized hooks for categories and user interests
+  const { data: categories } = useCategories();
   const { data: userInterests } = useUserInterests();
 
   useEffect(() => {
     if (user) {
+      console.log('User object:', user); // Debug log
       setFormData({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
@@ -39,15 +40,23 @@ const Profile = () => {
         role: user.role || 'end_user',
         language: user.language || 'en'
       });
+      
+      // Set the user's current category of interest if it exists
+      if (user.categoryOfInterest) {
+        console.log('Setting category from user:', user.categoryOfInterest); // Debug log
+        setCategoryOfInterest(user.categoryOfInterest._id || user.categoryOfInterest);
+      }
     }
     fetchRoleRequests();
+    fetchUserProfile(); // Fetch complete user profile including category
   }, [user]);
 
   useEffect(() => {
-    if (userInterests && userInterests.length > 0) {
+    // Only set from userInterests if user doesn't have a categoryOfInterest already set
+    if (userInterests && userInterests.length > 0 && !categoryOfInterest && !user?.categoryOfInterest) {
       setCategoryOfInterest(userInterests[0]._id);
     }
-  }, [userInterests]);
+  }, [userInterests, categoryOfInterest, user?.categoryOfInterest]);
 
   const fetchRoleRequests = async () => {
     try {
@@ -55,6 +64,22 @@ const Profile = () => {
       setRoleRequests(response.data);
     } catch (error) {
       console.error('Error fetching role requests:', error);
+    }
+  };
+
+  const fetchUserProfile = async () => {
+    try {
+      // Try to get user with populated category - might need to add this endpoint
+      const response = await api.get('/auth/me');
+      const userData = response.data.data; // Corrected to match API response structure
+      console.log('Fetched user profile:', userData); // Debug log
+      
+      if (userData.categoryOfInterest) {
+        setCategoryOfInterest(userData.categoryOfInterest._id || userData.categoryOfInterest);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      // If that endpoint doesn't exist, we'll need to rely on the user context
     }
   };
 
@@ -91,6 +116,15 @@ const Profile = () => {
       }
 
       await api.put('/auth/profile', updateData);
+      
+      // Refresh user data after successful update
+      try {
+        const userResponse = await api.get('/auth/me');
+        updateUser(userResponse.data.data);
+      } catch (refreshError) {
+        console.error('Error refreshing user data:', refreshError);
+      }
+      
       setSuccess('Profile updated successfully!');
     } catch (error) {
       setError(error.response?.data?.message || 'Error updating profile');
@@ -168,11 +202,11 @@ const Profile = () => {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Name Field */}
+            {/* First Name Field */}
             <div>
               <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
                 <FaUser className="inline mr-2" />
-                Name
+                First Name
               </label>
               <input
                 type="text"
@@ -181,7 +215,25 @@ const Profile = () => {
                 value={formData.firstName}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your name"
+                placeholder="Enter your first name"
+                required
+              />
+            </div>
+
+            {/* Last Name Field */}
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+                <FaUser className="inline mr-2" />
+                Last Name
+              </label>
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your last name"
                 required
               />
             </div>
@@ -233,11 +285,24 @@ const Profile = () => {
 
             {/* Category of Interest */}
             <div>
-              <CategorySelector
-                singleSelection={true}
-                selectedValues={categoryOfInterest ? [categoryOfInterest] : []}
-                onChange={(categoryId) => setCategoryOfInterest(categoryId)}
-              />
+              <label htmlFor="categoryOfInterest" className="block text-sm font-medium text-gray-700 mb-2">
+                <FaTag className="inline mr-2" />
+                Category of Interest
+              </label>
+              <select
+                id="categoryOfInterest"
+                name="categoryOfInterest"
+                value={categoryOfInterest}
+                onChange={(e) => setCategoryOfInterest(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select a category</option>
+                {categories?.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Language Selection */}

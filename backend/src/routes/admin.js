@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Category = require('../models/Category');
 const RoleRequest = require('../models/RoleRequest');
 const { protect, admin } = require('../middleware/auth');
+const { clearCache } = require('../middleware/cache');
 
 const router = express.Router();
 
@@ -69,8 +70,11 @@ router.delete('/tickets/:id', async (req, res) => {
 
     await Ticket.findByIdAndDelete(req.params.id);
 
-    res.json({
-      success: true,
+    // Clear cache after deleting ticket
+    clearCache('/api/tickets');
+    clearCache('/api/admin');
+
+    res.status(200).json({
       message: 'Ticket deleted successfully'
     });
   } catch (error) {

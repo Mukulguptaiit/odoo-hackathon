@@ -3,6 +3,7 @@ const router = express.Router();
 const Comment = require('../models/Comment');
 const Ticket = require('../models/Ticket');
 const { protect, supportAgent } = require('../middleware/auth');
+const { clearCache } = require('../middleware/cache');
 
 // Get comments for a ticket
 router.get('/ticket/:ticketId', protect, async (req, res) => {
@@ -62,6 +63,10 @@ router.post('/', protect, async (req, res) => {
     await comment.save();
     await comment.populate('author', 'firstName lastName role');
 
+    // Clear cache after creating comment
+    clearCache('/api/tickets');
+    clearCache('/api/comments');
+
     res.status(201).json(comment);
   } catch (error) {
     res.status(500).json({ message: 'Error creating comment', error: error.message });
@@ -87,6 +92,10 @@ router.put('/:id', protect, async (req, res) => {
     await comment.save();
     await comment.populate('author', 'firstName lastName role');
 
+    // Clear cache after updating comment
+    clearCache('/api/tickets');
+    clearCache('/api/comments');
+
     res.json(comment);
   } catch (error) {
     res.status(500).json({ message: 'Error updating comment', error: error.message });
@@ -108,6 +117,10 @@ router.delete('/:id', protect, async (req, res) => {
     }
 
     await Comment.findByIdAndDelete(req.params.id);
+
+    // Clear cache after deleting comment
+    clearCache('/api/tickets');
+    clearCache('/api/comments');
 
     res.json({ message: 'Comment deleted successfully' });
   } catch (error) {
@@ -151,6 +164,10 @@ router.post('/:id/vote', protect, async (req, res) => {
 
     await comment.save();
     await comment.populate('author', 'firstName lastName role');
+
+    // Clear cache after voting on comment
+    clearCache('/api/tickets');
+    clearCache('/api/comments');
 
     res.json(comment);
   } catch (error) {

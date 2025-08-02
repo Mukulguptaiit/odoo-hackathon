@@ -28,8 +28,10 @@ export const useTickets = (filters = {}, options = {}) => {
       const response = await api.get('/tickets', { params });
       return response.data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 15 * 60 * 1000, // 15 minutes cache
+    staleTime: 0, // Data is immediately stale - always refetch when component mounts
+    cacheTime: 30 * 1000, // Keep in cache for only 30 seconds
+    refetchOnWindowFocus: true, // Refetch when user focuses window
+    refetchOnMount: true, // Always refetch when component mounts
     keepPreviousData: true, // Keep previous data while fetching new data
     ...options
   });
@@ -80,8 +82,10 @@ export const useTicketStats = () => {
         recentTickets: tickets.slice(0, 5)
       };
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    cacheTime: 20 * 60 * 1000, // 20 minutes cache
+    staleTime: 0, // Data is immediately stale - always refetch
+    cacheTime: 30 * 1000, // Keep in cache for only 30 seconds
+    refetchOnWindowFocus: true, // Refetch when user focuses window
+    refetchOnMount: true, // Always refetch when component mounts
   });
 };
 

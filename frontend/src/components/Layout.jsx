@@ -101,7 +101,7 @@ const Layout = ({ children }) => {
 
           {/* User info */}
           <div className="p-4 border-t border-gray-200">
-            <div className="flex items-center gap-3 mb-4">
+            <Link to="/profile" className="flex items-center gap-3 mb-4 rounded-lg p-2 hover:bg-gray-100 transition-colors cursor-pointer">
               <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium">
                   {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
@@ -115,7 +115,7 @@ const Layout = ({ children }) => {
                   {getRoleDisplay(user?.role)}
                 </p>
               </div>
-            </div>
+            </Link>
             <button
               onClick={logout}
               className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"

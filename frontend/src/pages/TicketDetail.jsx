@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   FaArrowLeft, FaEdit, FaTrash, FaThumbsUp, FaThumbsDown, 
@@ -11,6 +12,7 @@ const TicketDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [ticket, setTicket] = useState(null);
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,17 +32,14 @@ const TicketDetail = () => {
   const fetchTicket = async () => {
     try {
       setLoading(true);
-      const [ticketResponse, commentsResponse] = await Promise.all([
-        api.get(`/tickets/${id}`),
-        api.get(`/comments/ticket/${id}`)
-      ]);
-      setTicket(ticketResponse.data);
-      setComments(commentsResponse.data);
+      const response = await api.get(`/tickets/${id}`);
+      setTicket(response.data.ticket);
+      setComments(response.data.comments);
       setEditData({
-        subject: ticketResponse.data.subject,
-        description: ticketResponse.data.description,
-        category: ticketResponse.data.category?._id || '',
-        status: ticketResponse.data.status
+        subject: response.data.ticket.subject,
+        description: response.data.ticket.description,
+        category: response.data.ticket.category?._id || '',
+        status: response.data.ticket.status
       });
     } catch (error) {
       setError('Error fetching question details');
@@ -53,7 +52,7 @@ const TicketDetail = () => {
   const handleVote = async (itemId, voteType, itemType = 'ticket') => {
     try {
       const endpoint = itemType === 'comment' 
-        ? `/comments/${itemId}/vote`
+        ? `/tickets/comments/${itemId}/vote`
         : `/tickets/${itemId}/vote`;
       
       const response = await api.post(endpoint, { voteType });
@@ -88,16 +87,20 @@ const TicketDetail = () => {
         formData.append('attachments', file);
       });
 
-      const response = await api.post('/comments', {
-        ticketId: id,
-        content: newComment,
-        isInternal
+      const response = await api.post(`/tickets/${id}/comments`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
       setComments(prev => [...prev, response.data]);
       setNewComment('');
       setCommentAttachments([]);
       setIsInternal(false);
+      
+      // Invalidate related queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['ticketStats'] });
     } catch (error) {
       setError('Error adding comment');
     } finally {
@@ -111,6 +114,10 @@ const TicketDetail = () => {
       const response = await api.put(`/tickets/${id}`, editData);
       setTicket(response.data);
       setEditMode(false);
+      
+      // Invalidate related queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['ticketStats'] });
     } catch (error) {
       setError('Error updating question');
     } finally {
@@ -123,6 +130,11 @@ const TicketDetail = () => {
     
     try {
       await api.delete(`/tickets/${id}`);
+      
+      // Invalidate related queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['ticketStats'] });
+      
       navigate('/tickets');
     } catch (error) {
       setError('Error deleting question');
@@ -133,6 +145,10 @@ const TicketDetail = () => {
     try {
       const response = await api.put(`/tickets/${id}`, { status: 'closed' });
       setTicket(response.data);
+      
+      // Invalidate related queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['ticketStats'] });
     } catch (error) {
       setError('Error closing question');
     }
@@ -270,7 +286,7 @@ const TicketDetail = () => {
               </div>
 
               <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                <span>Asked by {ticket.creatorName}</span>
+                <span>Asked by {ticket.creator ? `${ticket.creator.firstName} ${ticket.creator.lastName}` : 'Unknown User'}</span>
                 <span>• {formatDate(ticket.createdAt)}</span>
                 {ticket.category && (
                   <span className="flex items-center gap-1">
@@ -300,7 +316,7 @@ const TicketDetail = () => {
               <button
                 onClick={() => handleVote(ticket._id, 'upvote')}
                 className={`p-2 rounded-lg transition-colors ${
-                  ticket.upvotes.some(vote => vote._id === user._id)
+                  ticket.upvotes?.some(vote => vote._id === user._id)
                     ? 'text-green-600 bg-green-50'
                     : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
                 }`}
@@ -308,12 +324,12 @@ const TicketDetail = () => {
                 <FaThumbsUp />
               </button>
               <span className="text-sm text-gray-500 min-w-[20px] text-center">
-                {ticket.voteCount}
+                {ticket.voteCount || (ticket.upvotes?.length || 0) - (ticket.downvotes?.length || 0)}
               </span>
               <button
                 onClick={() => handleVote(ticket._id, 'downvote')}
                 className={`p-2 rounded-lg transition-colors ${
-                  ticket.downvotes.some(vote => vote._id === user._id)
+                  ticket.downvotes?.some(vote => vote._id === user._id)
                     ? 'text-red-600 bg-red-50'
                     : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
                 }`}
@@ -530,7 +546,7 @@ const TicketDetail = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="font-medium text-gray-900">
-                          {comment.authorName}
+                          {comment.author ? `${comment.author.firstName} ${comment.author.lastName}` : 'Unknown User'}
                         </span>
                         {comment.isInternal && (
                           <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
@@ -569,7 +585,7 @@ const TicketDetail = () => {
                         <button
                           onClick={() => handleVote(comment._id, 'upvote', 'comment')}
                           className={`p-1 rounded transition-colors ${
-                            comment.upvotes.some(vote => vote._id === user._id)
+                            comment.upvotes?.some(vote => vote._id === user._id)
                               ? 'text-green-600 bg-green-50'
                               : 'text-gray-400 hover:text-green-600 hover:bg-green-50'
                           }`}
@@ -577,12 +593,12 @@ const TicketDetail = () => {
                           <FaThumbsUp className="w-3 h-3" />
                         </button>
                         <span className="text-xs text-gray-500 min-w-[16px] text-center">
-                          {comment.voteCount}
+                          {comment.voteCount || (comment.upvotes?.length || 0) - (comment.downvotes?.length || 0)}
                         </span>
                         <button
                           onClick={() => handleVote(comment._id, 'downvote', 'comment')}
                           className={`p-1 rounded transition-colors ${
-                            comment.downvotes.some(vote => vote._id === user._id)
+                            comment.downvotes?.some(vote => vote._id === user._id)
                               ? 'text-red-600 bg-red-50'
                               : 'text-gray-400 hover:text-red-600 hover:bg-red-50'
                           }`}
