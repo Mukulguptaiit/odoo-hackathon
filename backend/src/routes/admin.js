@@ -254,4 +254,205 @@ router.get('/users', async (req, res) => {
   }
 });
 
+// @desc    Get all categories for management
+// @route   GET /api/admin/categories
+// @access  Admin
+router.get('/categories', async (req, res) => {
+  try {
+    const categories = await Category.find().sort({ name: 1 });
+    res.json({
+      success: true,
+      data: categories
+    });
+  } catch (error) {
+    console.error('Get categories error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error' 
+    });
+  }
+});
+
+// @desc    Create a new category
+// @route   POST /api/admin/categories
+// @access  Admin
+router.post('/categories', [
+  body('name')
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Category name must be between 1 and 100 characters'),
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Description cannot exceed 500 characters')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { name, description } = req.body;
+
+    // Check if category already exists
+    const existingCategory = await Category.findOne({ 
+      name: { $regex: new RegExp('^' + name + '$', 'i') } 
+    });
+
+    if (existingCategory) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category with this name already exists'
+      });
+    }
+
+    const category = new Category({
+      name: name.trim(),
+      description: description?.trim(),
+      createdBy: req.user._id
+    });
+
+    await category.save();
+    clearCache('/api/categories');
+
+    res.status(201).json({
+      success: true,
+      message: 'Category created successfully',
+      data: category
+    });
+  } catch (error) {
+    console.error('Create category error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error' 
+    });
+  }
+});
+
+// @desc    Update a category
+// @route   PUT /api/admin/categories/:id
+// @access  Admin
+router.put('/categories/:id', [
+  body('name')
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Category name must be between 1 and 100 characters'),
+  body('description')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('Description cannot exceed 500 characters')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { name, description } = req.body;
+    const categoryId = req.params.id;
+
+    // Check if category exists
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: 'Category not found'
+      });
+    }
+
+    // Check if another category with the same name exists
+    const existingCategory = await Category.findOne({ 
+      name: { $regex: new RegExp('^' + name + '$', 'i') },
+      _id: { $ne: categoryId }
+    });
+
+    if (existingCategory) {
+      return res.status(400).json({
+        success: false,
+        message: 'Another category with this name already exists'
+      });
+    }
+
+    category.name = name.trim();
+    if (description !== undefined) {
+      category.description = description?.trim();
+    }
+
+    await category.save();
+    clearCache('/api/categories');
+
+    res.json({
+      success: true,
+      message: 'Category updated successfully',
+      data: category
+    });
+  } catch (error) {
+    console.error('Update category error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error' 
+    });
+  }
+});
+
+// @desc    Delete a category
+// @route   DELETE /api/admin/categories/:id
+// @access  Admin
+router.delete('/categories/:id', async (req, res) => {
+  try {
+    const categoryId = req.params.id;
+
+    // Check if category exists
+    const category = await Category.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: 'Category not found'
+      });
+    }
+
+    // Check if category is being used by any tickets
+    const ticketsUsingCategory = await Ticket.countDocuments({ category: categoryId });
+    if (ticketsUsingCategory > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete category. It is being used by ${ticketsUsingCategory} ticket(s). Please reassign those tickets to another category first.`
+      });
+    }
+
+    // Check if category is being used by any users as categoryOfInterest
+    const usersUsingCategory = await User.countDocuments({ categoryOfInterest: categoryId });
+    if (usersUsingCategory > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete category. It is being used as an interest by ${usersUsingCategory} user(s). Please ask those users to update their interests first.`
+      });
+    }
+
+    await Category.findByIdAndDelete(categoryId);
+    clearCache('/api/categories');
+
+    res.json({
+      success: true,
+      message: 'Category deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete category error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error' 
+    });
+  }
+});
+
 module.exports = router; 

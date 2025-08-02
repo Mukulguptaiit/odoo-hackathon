@@ -93,10 +93,8 @@ router.get('/:id', protect, async (req, res) => {
     }
 
     // Check if user can view this question
-    // End users can only view their own tickets, support agents and admins can view all
-    if (req.user.role === 'end_user' && ticket.creator.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
+    // All authenticated users can view any ticket via direct URL
+    // End users can only see non-internal comments, while support agents and admins can see all comments
 
     // Get comments with role-based filtering
     let commentQuery = { ticket: req.params.id };
@@ -249,13 +247,14 @@ router.post('/:id/comments', protect, upload.array('attachments', 5), async (req
     }
 
     // Check if user can comment on this question
-    // Support agents and admins can comment on any question
-    // End users can only comment on their own questions
-    if (req.user.role === 'end_user' && ticket.creator.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'You can only comment on your own questions' });
-    }
-
+    // All authenticated users can comment on any question they can access
+    // Only support agents and admins can create internal comments
     const { content, isInternal = false } = req.body;
+    
+    // Restrict internal comments to support agents and admins only
+    if (isInternal && req.user.role === 'end_user') {
+      return res.status(403).json({ message: 'End users cannot create internal comments' });
+    }
 
     const attachments = req.files ? req.files.map(file => ({
       filename: file.originalname,
