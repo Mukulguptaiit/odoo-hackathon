@@ -30,14 +30,17 @@ const TicketDetail = () => {
   const fetchTicket = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/tickets/${id}`);
-      setTicket(response.data.ticket);
-      setComments(response.data.comments);
+      const [ticketResponse, commentsResponse] = await Promise.all([
+        api.get(`/tickets/${id}`),
+        api.get(`/comments/ticket/${id}`)
+      ]);
+      setTicket(ticketResponse.data);
+      setComments(commentsResponse.data);
       setEditData({
-        subject: response.data.ticket.subject,
-        description: response.data.ticket.description,
-        category: response.data.ticket.category._id,
-        status: response.data.ticket.status
+        subject: ticketResponse.data.subject,
+        description: ticketResponse.data.description,
+        category: ticketResponse.data.category?._id || '',
+        status: ticketResponse.data.status
       });
     } catch (error) {
       setError('Error fetching question details');
@@ -50,7 +53,7 @@ const TicketDetail = () => {
   const handleVote = async (itemId, voteType, itemType = 'ticket') => {
     try {
       const endpoint = itemType === 'comment' 
-        ? `/tickets/comments/${itemId}/vote`
+        ? `/comments/${itemId}/vote`
         : `/tickets/${itemId}/vote`;
       
       const response = await api.post(endpoint, { voteType });
@@ -85,10 +88,10 @@ const TicketDetail = () => {
         formData.append('attachments', file);
       });
 
-      const response = await api.post(`/tickets/${id}/comments`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      const response = await api.post('/comments', {
+        ticketId: id,
+        content: newComment,
+        isInternal
       });
 
       setComments(prev => [...prev, response.data]);

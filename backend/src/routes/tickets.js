@@ -114,10 +114,12 @@ router.post('/', protect, upload.array('attachments', 5), async (req, res) => {
   try {
     const { subject, description, category, priority = 'medium' } = req.body;
 
-    // Validate category exists
-    const categoryExists = await Category.findById(category);
-    if (!categoryExists) {
-      return res.status(400).json({ message: 'Invalid category' });
+    // Validate category exists if provided
+    if (category) {
+      const categoryExists = await Category.findById(category);
+      if (!categoryExists) {
+        return res.status(400).json({ message: 'Invalid category' });
+      }
     }
 
     const attachments = req.files ? req.files.map(file => ({

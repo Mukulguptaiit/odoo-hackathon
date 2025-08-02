@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema({
     enum: ['end_user', 'support_agent', 'admin'],
     default: 'end_user'
   },
+  categoriesOfInterest: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category'
+  }],
   isVerified: {
     type: Boolean,
     default: false

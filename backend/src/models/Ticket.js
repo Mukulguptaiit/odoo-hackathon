@@ -15,8 +15,7 @@ const ticketSchema = new mongoose.Schema({
   },
   category: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Category',
-    required: [true, 'Category is required']
+    ref: 'Category'
   },
   status: {
     type: String,

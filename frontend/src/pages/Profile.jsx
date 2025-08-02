@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { FaUser, FaEnvelope, FaShieldAlt, FaGlobe, FaSave, FaSignOutAlt, FaArrowLeft, FaUserPlus, FaClock } from 'react-icons/fa';
 import api from '../services/api';
+import CategorySelector from '../components/CategorySelector';
 
 const Profile = () => {
   const { user, logout } = useAuth();
@@ -22,9 +23,9 @@ const Profile = () => {
     lastName: '',
     email: '',
     role: 'end_user',
-    category: '',
     language: 'en'
   });
+  const [categoriesOfInterest, setCategoriesOfInterest] = useState([]);
 
   useEffect(() => {
     if (user) {
@@ -33,11 +34,11 @@ const Profile = () => {
         lastName: user.lastName || '',
         email: user.email || '',
         role: user.role || 'end_user',
-        category: user.category || '',
         language: user.language || 'en'
       });
     }
     fetchCategories();
+    fetchUserInterests();
     fetchRoleRequests();
   }, [user]);
 
@@ -56,6 +57,15 @@ const Profile = () => {
       setRoleRequests(response.data);
     } catch (error) {
       console.error('Error fetching role requests:', error);
+    }
+  };
+
+  const fetchUserInterests = async () => {
+    try {
+      const response = await api.get('/categories/user-interests');
+      setCategoriesOfInterest(response.data.map(cat => cat._id));
+    } catch (error) {
+      console.error('Error fetching user interests:', error);
     }
   };
 
@@ -81,10 +91,8 @@ const Profile = () => {
         email: formData.email
       };
 
-      // Only support agents and admins can update category
-      if (user.role === 'support_agent' || user.role === 'admin') {
-        updateData.category = formData.category;
-      }
+      // Update categories of interest for all users
+      updateData.categoriesOfInterest = categoriesOfInterest;
 
       // Only admins can update roles
       if (user.role === 'admin') {
@@ -232,33 +240,13 @@ const Profile = () => {
               )}
             </div>
 
-            {/* Category Selection */}
+            {/* Categories of Interest */}
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                id="category"
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                disabled={!canUpdateCategory}
-                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  !canUpdateCategory ? 'bg-gray-100 cursor-not-allowed' : ''
-                }`}
-              >
-                <option value="">Select a category</option>
-                {categories.map(category => (
-                  <option key={category._id} value={category._id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-              {!canUpdateCategory && (
-                <p className="mt-1 text-sm text-gray-500">
-                  Only support agents and admins can update categories
-                </p>
-              )}
+              <CategorySelector
+                multiple={true}
+                selectedValues={categoriesOfInterest}
+                onChange={setCategoriesOfInterest}
+              />
             </div>
 
             {/* Language Selection */}

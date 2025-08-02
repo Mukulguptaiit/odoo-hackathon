@@ -127,7 +127,7 @@ router.post('/login', [
 // @access  Private
 router.get('/me', protect, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id).populate('categoriesOfInterest');
     
     if (user) {
       res.json({
@@ -138,7 +138,8 @@ router.get('/me', protect, async (req, res) => {
           firstName: user.firstName,
           lastName: user.lastName,
           points: user.points,
-          role: user.role
+          role: user.role,
+          categoriesOfInterest: user.categoriesOfInterest
         }
       });
     } else {
@@ -149,6 +150,85 @@ router.get('/me', protect, async (req, res) => {
     }
   } catch (error) {
     console.error('Get user error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error' 
+    });
+  }
+});
+
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+router.put('/profile', protect, [
+  body('firstName').trim().notEmpty().withMessage('First name is required'),
+  body('lastName').trim().notEmpty().withMessage('Last name is required'),
+  body('email').isEmail().normalizeEmail().withMessage('Please enter a valid email')
+], async (req, res) => {
+  try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false,
+        errors: errors.array() 
+      });
+    }
+
+    const { firstName, lastName, email, categoriesOfInterest, role } = req.body;
+
+    // Check if email is already taken by another user
+    const existingUser = await User.findOne({ email, _id: { $ne: req.user._id } });
+    if (existingUser) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email is already taken' 
+      });
+    }
+
+    // Build update object
+    const updateData = {
+      firstName,
+      lastName,
+      email
+    };
+
+    // Only allow admins to update roles
+    if (role && req.user.role === 'admin') {
+      updateData.role = role;
+    }
+
+    // Update categories of interest
+    if (categoriesOfInterest) {
+      updateData.categoriesOfInterest = categoriesOfInterest;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      updateData,
+      { new: true, runValidators: true }
+    ).populate('categoriesOfInterest');
+
+    if (user) {
+      res.json({
+        success: true,
+        data: {
+          _id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          categoriesOfInterest: user.categoriesOfInterest
+        }
+      });
+    } else {
+      res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+  } catch (error) {
+    console.error('Update profile error:', error);
     res.status(500).json({ 
       success: false,
       message: 'Server error' 

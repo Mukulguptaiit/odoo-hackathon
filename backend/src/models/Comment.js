@@ -15,7 +15,7 @@ const commentSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Content is required'],
     trim: true,
-    maxlength: [2000, 'Content cannot exceed 2000 characters']
+    maxlength: [2000, 'Comment cannot exceed 2000 characters']
   },
   isInternal: {
     type: Boolean,

@@ -6,11 +6,13 @@ const dotenv = require('dotenv');
 const path = require('path');
 
 const connectDB = require('./config/database');
+const { seedCategories } = require('./utils/seedCategories');
 const authRoutes = require('./routes/auth');
 const ticketRoutes = require('./routes/tickets');
 const categoryRoutes = require('./routes/categories');
 const adminRoutes = require('./routes/admin');
 const roleRequestRoutes = require('./routes/roleRequests');
+const commentRoutes = require('./routes/comments');
 const { errorHandler } = require('./middleware/errorHandler');
 
 // Load environment variables
@@ -51,6 +53,7 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/role-requests', roleRequestRoutes);
+app.use('/api/comments', commentRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -74,6 +77,9 @@ const startServer = async () => {
   try {
     // Connect to MongoDB
     await connectDB();
+    
+    // Seed predefined categories
+    await seedCategories();
     
     app.listen(PORT, () => {
       console.log(`🚀 QuickDesk API server running on port ${PORT}`);

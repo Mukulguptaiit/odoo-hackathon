@@ -28,7 +28,10 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      // Only redirect if not already on login page
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
@@ -78,6 +81,22 @@ export const roleRequestsAPI = {
   create: (data) => api.post('/role-requests', data),
   review: (id, data) => api.put(`/role-requests/${id}/review`, data),
   delete: (id) => api.delete(`/role-requests/${id}`),
+}
+
+// Categories API
+export const categoriesAPI = {
+  getAll: () => api.get('/categories'),
+  getUserInterests: () => api.get('/categories/user-interests'),
+  updateUserInterests: (data) => api.put('/categories/user-interests', data),
+}
+
+// Comments API
+export const commentsAPI = {
+  getByTicket: (ticketId) => api.get(`/comments/ticket/${ticketId}`),
+  create: (data) => api.post('/comments', data),
+  update: (id, data) => api.put(`/comments/${id}`, data),
+  delete: (id) => api.delete(`/comments/${id}`),
+  vote: (id, voteType) => api.post(`/comments/${id}/vote`, { voteType }),
 }
 
 export default api 

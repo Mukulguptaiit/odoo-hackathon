@@ -3,13 +3,10 @@ const router = express.Router();
 const Category = require('../models/Category');
 const { protect, admin } = require('../middleware/auth');
 
-// Get all categories (active only for non-admins)
+// Get all predefined categories (categories of interest)
 router.get('/', protect, async (req, res) => {
   try {
-    const query = req.user.role === 'admin' ? {} : { isActive: true };
-    
-    const categories = await Category.find(query)
-      .populate('createdBy', 'firstName lastName')
+    const categories = await Category.find({ isPredefined: true, isActive: true })
       .sort({ name: 1 });
 
     res.json(categories);
@@ -34,30 +31,30 @@ router.get('/:id', protect, async (req, res) => {
   }
 });
 
-// Create new category (all authenticated users)
-router.post('/', protect, async (req, res) => {
+// Get user's categories of interest
+router.get('/user-interests', protect, async (req, res) => {
   try {
-    const { name, description, color } = req.body;
-
-    // Check if category name already exists
-    const existingCategory = await Category.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
-    if (existingCategory) {
-      return res.status(400).json({ message: 'Category with this name already exists' });
-    }
-
-    const category = new Category({
-      name,
-      description,
-      color,
-      createdBy: req.user._id
-    });
-
-    await category.save();
-    await category.populate('createdBy', 'firstName lastName');
-
-    res.status(201).json(category);
+    const user = await User.findById(req.user._id).populate('categoriesOfInterest');
+    res.json(user.categoriesOfInterest || []);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating category', error: error.message });
+    res.status(500).json({ message: 'Error fetching user interests', error: error.message });
+  }
+});
+
+// Update user's categories of interest
+router.put('/user-interests', protect, async (req, res) => {
+  try {
+    const { categoryIds } = req.body;
+    
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { categoriesOfInterest: categoryIds },
+      { new: true }
+    ).populate('categoriesOfInterest');
+
+    res.json(user.categoriesOfInterest);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating user interests', error: error.message });
   }
 });
 

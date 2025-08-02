@@ -22,6 +22,10 @@ const categorySchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  isPredefined: {
+    type: Boolean,
+    default: false
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
